@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // -------------------------------------------------------------
+    // Users Collection
+    // -------------------------------------------------------------
+    match /users/{userId} {
+      // Anyone can view user profiles (e.g., to view provider details)
+      allow read: if isAuthenticated();
+      
+      // Users can only write/update their own profile
+      allow write: if isOwner(userId);
+    }
+
+    // -------------------------------------------------------------
+    // Services Collection
+    // -------------------------------------------------------------
+    match /services/{serviceId} {
+      // Anyone can browse service listings
+      allow read: if isAuthenticated();
+
+      // Only authenticated users can create a service, and they must set themselves as the provider
+      allow create: if isAuthenticated() && request.resource.data.provider_id == request.auth.uid;
+
+      // Providers can only edit/delete their own services
+      allow update, delete: if isAuthenticated() && resource.data.provider_id == request.auth.uid;
+    }
+
+    // -------------------------------------------------------------
+    // Bookings Collection
+    // -------------------------------------------------------------
+    match /bookings/{bookingId} {
+      // A booking can only be read by the seeker who requested it or the provider who offers it
+      allow read: if isAuthenticated() && (
+        resource.data.seeker_id == request.auth.uid || 
+        resource.data.provider_id == request.auth.uid
+      );
+
+      // Seekers can create bookings and must set themselves as the seeker_id
+      allow create: if isAuthenticated() && request.resource.data.seeker_id == request.auth.uid;
+
+      // Both seeker and provider can update booking states under specific conditions:
+      // - Seekers can cancel their own bookings (e.g., status to 'cancelled')
+      // - Providers can accept/complete/cancel bookings assigned to them
+      allow update: if isAuthenticated() && (
+        (resource.data.seeker_id == request.auth.uid && request.resource.data.status == 'cancelled') ||
+        (resource.data.provider_id == request.auth.uid)
+      );
+
+      // Bookings cannot be hard deleted in general (just cancelled)
+      allow delete: if false;
+    }
+  }
+}

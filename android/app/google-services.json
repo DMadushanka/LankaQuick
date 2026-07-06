@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "31897924939",
+    "project_id": "locallink-88ae7",
+    "storage_bucket": "locallink-88ae7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:31897924939:android:e82c642669b7765dff64ce",
+        "android_client_info": {
+          "package_name": "com.gayan.locallink"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRTcT6SD86T_nHEy61oyb0jWej83GgWBI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
