@@ -2,7 +2,6 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_link/core/theme/app_theme.dart';
 import 'package:local_link/features/auth/presentation/providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -22,6 +21,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late Animation<double> _textFadeAnimation;
   late Animation<double> _textSlideAnimation;
   late Animation<double> _ambientScaleAnimation;
+  late Animation<double> _logoScaleAnimation;
 
   @override
   void initState() {
@@ -84,6 +84,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 1.0, curve: Curves.easeInOutSine),
+      ),
+    );
+
+    // Logo scale transition (0.0 to 0.60)
+    _logoScaleAnimation = Tween<double>(begin: 0.82, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.60, curve: Curves.easeOutBack),
       ),
     );
 
@@ -171,15 +179,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 AnimatedBuilder(
                   animation: _controller,
                   builder: (context, child) {
-                    return SizedBox(
-                      width: 200,
-                      height: 140,
-                      child: CustomPaint(
-                        painter: LankaQuickLogoPainter(
-                          drawLProgress: _lAnimation.value,
-                          drawQProgress: _qAnimation.value,
-                          shockwaveProgress: _shockwaveAnimation.value,
-                          glowOpacity: _glowAnimation.value,
+                    return Transform.scale(
+                      scale: _logoScaleAnimation.value,
+                      child: SizedBox(
+                        width: 200,
+                        height: 140,
+                        child: CustomPaint(
+                          painter: LankaQuickLogoPainter(
+                            drawLProgress: _lAnimation.value,
+                            drawQProgress: _qAnimation.value,
+                            shockwaveProgress: _shockwaveAnimation.value,
+                            glowOpacity: _glowAnimation.value,
+                          ),
                         ),
                       ),
                     );

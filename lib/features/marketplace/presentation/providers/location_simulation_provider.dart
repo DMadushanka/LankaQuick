@@ -1,11 +1,8 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_link/features/auth/domain/entities/user_entity.dart';
 import 'package:local_link/features/auth/presentation/providers/auth_provider.dart';
-import 'package:local_link/features/bookings/domain/entities/booking_entity.dart';
 import 'package:local_link/features/bookings/presentation/providers/bookings_provider.dart';
-import 'package:local_link/features/bookings/presentation/screens/bookings_demo_screen.dart';
 import 'package:local_link/features/marketplace/presentation/widgets/virtual_grid_map.dart';
 
 class TrackingState {
@@ -207,20 +204,7 @@ class TrackingSimulationNotifier extends Notifier<TrackingState?> {
           );
     } else {
       // Update in local mock bookings list
-      ref.read(mockBookingsProvider.notifier).update((stateList) {
-        return stateList.map((b) {
-          if (b.id == bookingId) {
-            return BookingEntity(
-              id: b.id,
-              seekerId: b.seekerId,
-              providerId: b.providerId,
-              status: status,
-              timestamp: b.timestamp,
-            );
-          }
-          return b;
-        }).toList();
-      });
+      ref.read(mockBookingsProvider.notifier).updateStatus(bookingId, status);
     }
   }
 }

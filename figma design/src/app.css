@@ -1,0 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: #0f0f14;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, #1e1430 0%, #0f0f14 70%);
+  padding: 24px 16px;
+}
+
+.phone-frame {
+  width: 390px;
+  height: 844px;
+  background: #12121a;
+  border-radius: 52px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 0 0 10px #1a1a24,
+    0 0 0 11px rgba(255,255,255,0.05),
+    0 40px 100px rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  background: transparent;
+}
+
+.status-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.screen-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+.screen-content::-webkit-scrollbar {
+  display: none;
+}
+
+.home-indicator {
+  padding: 8px 0 12px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.home-bar {
+  width: 134px;
+  height: 5px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 3px;
+}
+
+/* Animations */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(0.95); opacity: 0.9; }
+  50%  { transform: scale(1.05); opacity: 0.5; }
+  100% { transform: scale(0.95); opacity: 0.9; }
+}
+
+@keyframes float-pin {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-up {
+  animation: fadeSlideUp 0.4s ease both;
+}
+
+.map-pin-anim {
+  animation: float-pin 2.2s ease-in-out infinite;
+}
+
+.pulse-ring {
+  animation: pulse-ring 2s ease-in-out infinite;
+}

@@ -18,19 +18,19 @@ class PinKeypadWidget extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      width: 64,
-      height: 64,
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      width: 68,
+      height: 68,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: isDark
-            ? Colors.white.withOpacity(0.06)
-            : Colors.black.withOpacity(0.04),
+            ? Colors.white.withOpacity(0.04)
+            : Colors.black.withOpacity(0.03),
         border: Border.all(
           color: isDark
-              ? Colors.white.withOpacity(0.08)
-              : Colors.black.withOpacity(0.05),
-          width: 1,
+              ? Colors.white.withOpacity(0.06)
+              : Colors.black.withOpacity(0.04),
+          width: 1.2,
         ),
       ),
       child: ClipOval(
@@ -38,15 +38,15 @@ class PinKeypadWidget extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            splashColor: theme.colorScheme.primary.withOpacity(0.12),
-            highlightColor: theme.colorScheme.primary.withOpacity(0.06),
+            splashColor: theme.colorScheme.primary.withOpacity(0.15),
+            highlightColor: theme.colorScheme.primary.withOpacity(0.08),
             child: Center(
               child: icon ??
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w500,
                       color: isDark ? Colors.white : Colors.black87,
                       fontFamily: 'Outfit',
                     ),
@@ -60,6 +60,7 @@ class PinKeypadWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -133,8 +134,8 @@ class PinKeypadWidget extends StatelessWidget {
                 'C',
                 style: TextStyle(
                   fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.redAccent.shade400,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.redAccent.shade200,
                   fontFamily: 'Outfit',
                 ),
               ),
@@ -148,10 +149,10 @@ class PinKeypadWidget extends StatelessWidget {
             _buildKeypadButton(
               context: context,
               label: 'back',
-              icon: const Icon(
-                Icons.backspace_outlined,
-                size: 24,
-                color: Colors.grey,
+              icon: Icon(
+                Icons.backspace_rounded,
+                size: 22,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
               ),
               onTap: () => onKeyPress('backspace'),
             ),

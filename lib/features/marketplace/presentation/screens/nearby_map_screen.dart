@@ -3,15 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_link/core/localization/app_localizations.dart';
 import 'package:local_link/core/theme/app_theme.dart';
+import 'package:local_link/core/theme/app_background.dart';
 import 'package:local_link/features/auth/domain/entities/user_entity.dart';
 import 'package:local_link/features/auth/presentation/providers/auth_provider.dart';
 import 'package:local_link/features/bookings/domain/entities/booking_entity.dart';
 import 'package:local_link/features/bookings/presentation/providers/bookings_provider.dart';
-import 'package:local_link/features/bookings/presentation/screens/bookings_demo_screen.dart';
 import 'package:local_link/features/marketplace/presentation/widgets/virtual_grid_map.dart';
 import 'package:local_link/features/marketplace/presentation/providers/marketplace_provider.dart';
 import 'package:local_link/features/marketplace/presentation/screens/marketplace_demo_screen.dart';
 import 'package:local_link/features/marketplace/domain/entities/service_entity.dart';
+import 'package:local_link/features/marketplace/data/mock_providers_data.dart';
+import 'package:local_link/features/marketplace/presentation/widgets/provider_card_widget.dart';
 
 class NearbyMapScreen extends ConsumerStatefulWidget {
   final bool isSupabaseConfigured;
@@ -36,9 +38,9 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
   double? _tempLng;
   bool _isLocationSharingActive = true;
 
-  // Seeker's default GPS coordinate (Colombo 7)
-  final double seekerDefaultLat = 6.9200;
-  final double seekerDefaultLng = 79.8680;
+  // Seeker's default GPS coordinate (Gampaha)
+  final double seekerDefaultLat = 7.0897;
+  final double seekerDefaultLng = 79.9925;
 
   @override
   void dispose() {
@@ -64,24 +66,22 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
             providerId: provider.uid,
           );
     } else {
-      // Mock mode
-      ref.read(mockBookingsProvider.notifier).update((state) {
-        final newBooking = BookingEntity(
-          id: 'mock_book_${DateTime.now().millisecondsSinceEpoch}',
-          seekerId: seekerId,
-          providerId: provider.uid,
-          status: 'pending',
-          timestamp: DateTime.now(),
-        );
-        return [...state, newBooking];
-      });
+      // Mock mode: add a mock booking via notifier
+      final newBooking = BookingEntity(
+        id: 'mock_book_${DateTime.now().millisecondsSinceEpoch}',
+        seekerId: seekerId,
+        providerId: provider.uid,
+        status: 'pending',
+        timestamp: DateTime.now(),
+      );
+      ref.read(mockBookingsProvider.notifier).addBooking(newBooking);
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            const Icon(Icons.check_circle_rounded, color: Colors.white),
             const SizedBox(width: 8),
             Expanded(child: Text('${tr(ref, 'toast_request_sent')} to ${provider.name}')),
           ],
@@ -146,19 +146,25 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     if (currentUser == null) {
-      return Scaffold(
-        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.grey.shade50,
-        body: Center(
+      return AppBackground(
+        child: Center(
           child: Padding(
             padding: const EdgeInsets.all(32.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.lock_outline, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.lock_outline_rounded, size: 48, color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
                 Text(
                   tr(ref, 'bookings_signin'),
-                  style: const TextStyle(color: Colors.grey, fontSize: 16),
+                  style: const TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -205,14 +211,29 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
       return false;
     }).toList();
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(tr(ref, 'nav_nearby')),
+    return AppBackground(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Text(
+              tr(ref, 'nav_nearby'),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : Colors.black87,
+                fontFamily: 'Outfit',
+              ),
+            ),
+          ),
+          Expanded(
+            child: isProvider
+                ? _buildProviderView(currentUser)
+                : _buildSeekerView(currentUser, filteredProviders, servicesList, locale),
+          ),
+        ],
       ),
-      body: isProvider
-          ? _buildProviderView(currentUser)
-          : _buildSeekerView(currentUser, filteredProviders, servicesList, locale),
     );
   }
 
@@ -220,6 +241,7 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
     final double defaultLat = provider.locationLat ?? seekerDefaultLat;
     final double defaultLng = provider.locationLng ?? seekerDefaultLng;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -227,46 +249,46 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Active Sharing Toggle Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Icon(
-                    _isLocationSharingActive ? Icons.wifi_tethering : Icons.portable_wifi_off,
-                    color: _isLocationSharingActive ? AppTheme.secondaryColor : Colors.grey,
-                    size: 28,
+          Container(
+            decoration: AppTheme.glassDecoration(isDark: isDark, opacity: 0.5),
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Icon(
+                  _isLocationSharingActive ? Icons.wifi_tethering_rounded : Icons.portable_wifi_off_rounded,
+                  color: _isLocationSharingActive ? AppTheme.secondaryColor : Colors.grey,
+                  size: 28,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tr(ref, 'share_location'),
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _isLocationSharingActive ? 'Seekers can see you on their map.' : 'You are currently offline on maps.',
+                        style: TextStyle(color: Colors.grey.shade400, fontSize: 12, fontWeight: FontWeight.w500),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tr(ref, 'share_location'),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                        Text(
-                          _isLocationSharingActive ? 'Seekers can see you on their map.' : 'You are currently offline on maps.',
-                          style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: _isLocationSharingActive,
-                    activeColor: AppTheme.secondaryColor,
-                    onChanged: (val) {
-                      setState(() {
-                        _isLocationSharingActive = val;
-                      });
-                    },
-                  ),
-                ],
-              ),
+                ),
+                Switch(
+                  value: _isLocationSharingActive,
+                  activeColor: AppTheme.secondaryColor,
+                  onChanged: (val) {
+                    setState(() {
+                      _isLocationSharingActive = val;
+                    });
+                  },
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Map Header
           Row(
@@ -274,7 +296,7 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
             children: [
               Text(
                 'My Base Service Location',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, fontFamily: 'Outfit'),
               ),
               if (!_isSelectingLocation)
                 TextButton.icon(
@@ -285,8 +307,8 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
                       _tempLng = defaultLng;
                     });
                   },
-                  icon: const Icon(Icons.edit_location_alt, size: 18),
-                  label: const Text('Change'),
+                  icon: const Icon(Icons.edit_location_alt_rounded, size: 18),
+                  label: const Text('Change', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
             ],
           ),
@@ -324,22 +346,25 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
                       });
                     },
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppTheme.primaryColor),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       minimumSize: const Size(0, 50),
                     ),
-                    child: Text(tr(ref, 'btn_cancel'), style: const TextStyle(color: AppTheme.primaryColor)),
+                    child: Text(tr(ref, 'btn_cancel'), style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _saveProviderLocation(provider.uid),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Text(tr(ref, 'btn_set_location')),
+                    child: ElevatedButton(
+                      onPressed: () => _saveProviderLocation(provider.uid),
+                      style: AppTheme.premiumButtonStyle(),
+                      child: Text(tr(ref, 'btn_set_location'), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
                   ),
                 ),
               ],
@@ -355,84 +380,74 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Filter out providers without active location
-    final List<UserEntity> mappedProviders = providers.where((p) => p.locationLat != null && p.locationLng != null).toList();
+    // Filter providers reactively by category
+    final visibleFigmaProviders = figmaProviders.where((p) {
+      if (_selectedCategoryFilter == 'all') return true;
+      return p.categoryKey == _selectedCategoryFilter;
+    }).toList();
+
+    final List<UserEntity> mappedProviders = visibleFigmaProviders.map((p) => UserEntity(
+      uid: p.id,
+      name: p.name,
+      email: '${p.categoryKey}@gmail.com',
+      role: 'provider',
+      locationLat: p.lat,
+      locationLng: p.lng,
+    )).toList();
+
+    final activeFigmaProvider = _selectedProviderId != null
+        ? figmaProviders.firstWhere((p) => p.id == _selectedProviderId, orElse: () => figmaProviders[0])
+        : null;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Category Selector Chips
-        Container(
-          height: 48,
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: AppLocalizations.categories.length + 1,
-            itemBuilder: (context, index) {
-              final isAll = index == 0;
-              final categoryKey = isAll ? 'all' : AppLocalizations.categories[index - 1].key;
-              final label = isAll
-                  ? (locale == 'si' ? 'සියල්ල' : (locale == 'ta' ? 'அனைத்தும்' : 'All'))
-                  : AppLocalizations.categories[index - 1].getName(locale);
-              return _buildCategoryChip(categoryKey, label);
-            },
-          ),
-        ),
-
-        // Live Custom Map
-        Expanded(
-          child: Stack(
+        // Top Location Bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              VirtualGridMap(
-                seekerLat: seekerLat,
-                seekerLng: seekerLng,
-                providers: mappedProviders,
-                selectedProviderId: _selectedProviderId,
-                onTapMap: (lat, lng) {
-                  // Unselect or search coordinate
-                },
-                mapHeight: double.infinity,
-              ),
-
-              // Float GPS Simulator trigger for Seekers (Demonstration tool)
-              Positioned(
-                left: 12,
-                top: 12,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B).withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  child: TextButton.icon(
-                    onPressed: () async {
-                      // Simulates GPS movement for seeker (updates coordinates)
-                      final random = math.Random();
-                      final double offsetLat = (random.nextDouble() - 0.5) * 0.02;
-                      final double offsetLng = (random.nextDouble() - 0.5) * 0.02;
-                      
-                      await ref.read(authControllerProvider.notifier).updateLocation(
-                            uid: seeker.uid,
-                            lat: seekerDefaultLat + offsetLat,
-                            lng: seekerDefaultLng + offsetLng,
-                          );
-
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('GPS Simulation: Seeker coordinates updated!'),
-                            backgroundColor: AppTheme.primaryColor,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.gps_fixed, color: AppTheme.primaryColor, size: 16),
-                    label: Text(
-                      tr(ref, 'simulate_gps'),
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr(ref, 'map_showing_providers'),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
+                      fontWeight: FontWeight.w500,
                     ),
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    tr(ref, 'map_your_location'),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                      fontFamily: 'Outfit',
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppTheme.primaryColor.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  "${visibleFigmaProviders.length} ${tr(ref, 'map_nearby_count')}",
+                  style: const TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -440,161 +455,166 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
           ),
         ),
 
-        // Bottom PageView Carousel of Providers
-        if (mappedProviders.isNotEmpty)
-          Container(
-            height: 180,
-            margin: const EdgeInsets.only(bottom: 12, top: 12),
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: mappedProviders.length,
-              onPageChanged: (index) {
-                final provider = mappedProviders[index];
-                setState(() {
-                  _selectedProviderId = provider.uid;
-                });
-              },
-              itemBuilder: (context, index) {
-                final provider = mappedProviders[index];
-                final distance = _calculateDistance(
-                  seekerLat,
-                  seekerLng,
-                  provider.locationLat!,
-                  provider.locationLng!,
-                );
-                
-                final isSelected = provider.uid == _selectedProviderId;
-
-                return Card(
-                  elevation: isSelected ? 4 : 1,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color: isSelected ? AppTheme.secondaryColor : Colors.white.withOpacity(0.05),
-                      width: 2,
-                    ),
+        // Filter chips bar
+        Container(
+          height: 38,
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            children: [
+              // All Chip
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ChoiceChip(
+                  label: const Text("All", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+                  selected: _selectedCategoryFilter == 'all',
+                  onSelected: (val) {
+                    setState(() {
+                      _selectedCategoryFilter = 'all';
+                      _selectedProviderId = null;
+                    });
+                  },
+                  selectedColor: AppTheme.primaryColor.withOpacity(0.12),
+                  backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
+                  side: BorderSide(
+                    color: _selectedCategoryFilter == 'all'
+                        ? AppTheme.primaryColor
+                        : (isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
                   ),
-                  margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  labelStyle: TextStyle(
+                    color: _selectedCategoryFilter == 'all'
+                        ? AppTheme.primaryColor
+                        : (isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted),
+                  ),
+                ),
+              ),
+              // Category Specific Chips
+              ...figmaCategories.take(6).map((cat) {
+                final bool isActive = _selectedCategoryFilter == cat.id;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ChoiceChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundColor: AppTheme.secondaryColor,
-                              child: Text(
-                                provider.name[0].toUpperCase(),
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    provider.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.star, color: Colors.amber, size: 13),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '4.9',
-                                        style: TextStyle(color: isDark ? Colors.grey.shade300 : Colors.grey.shade700, fontSize: 11, fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '(${distance.toStringAsFixed(2)} ${tr(ref, 'distance_away')})',
-                                        style: const TextStyle(color: AppTheme.primaryColor, fontSize: 11, fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        const Divider(height: 1),
-                        const Spacer(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              servicesList.any((s) => s.providerId == provider.uid)
-                                  ? AppLocalizations.translateSubcategory(
-                                      servicesList.firstWhere((s) => s.providerId == provider.uid).category,
-                                      locale,
-                                    )
-                                  : (provider.name.contains('Pol')
-                                      ? (locale == 'si' ? 'පොල් කැඩීම' : 'Coconut Plucking')
-                                      : provider.name.contains('Gas')
-                                          ? (locale == 'si' ? 'ගස් කැපීම / ගෙවතු' : 'Tree Cutting / Gardening')
-                                          : 'Service Provider'),
-                              style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontSize: 12),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => _bookProvider(provider, seeker.uid),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                minimumSize: const Size(100, 36),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                              ),
-                              child: Text(tr(ref, 'btn_book_now'), style: const TextStyle(fontSize: 12, color: Colors.white)),
-                            ),
-                          ],
-                        ),
+                        Text(cat.emoji, style: const TextStyle(fontSize: 13)),
+                        const SizedBox(width: 4),
+                        Text(cat.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
                       ],
                     ),
+                    selected: isActive,
+                    onSelected: (val) {
+                      setState(() {
+                        _selectedCategoryFilter = isActive ? 'all' : cat.id;
+                        _selectedProviderId = null;
+                      });
+                    },
+                    selectedColor: cat.color.withOpacity(0.12),
+                    backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
+                    side: BorderSide(
+                      color: isActive ? cat.color.withOpacity(0.5) : (isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+                    ),
+                    labelStyle: TextStyle(
+                      color: isActive ? cat.color : (isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted),
+                    ),
                   ),
                 );
-              },
-            ),
-          )
-        else
-          Container(
-            padding: const EdgeInsets.all(24),
-            alignment: Alignment.center,
-            child: const Text(
-              'No active service providers nearby.',
-              style: TextStyle(color: Colors.grey),
+              }),
+            ],
+          ),
+        ),
+
+        // Custom Map View Container
+        Container(
+          height: 300,
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              children: [
+                VirtualGridMap(
+                  seekerLat: seekerLat,
+                  seekerLng: seekerLng,
+                  providers: mappedProviders,
+                  selectedProviderId: _selectedProviderId,
+                  onTapMap: (lat, lng) {
+                    if (visibleFigmaProviders.isEmpty) return;
+                    MockProvider? closest;
+                    double minDistance = 999999.0;
+                    for (var p in visibleFigmaProviders) {
+                      final pLat = p.lat;
+                      final pLng = p.lng;
+                      final dist = (pLat - lat).abs() + (pLng - lng).abs();
+                      if (dist < minDistance) {
+                        minDistance = dist;
+                        closest = p;
+                      }
+                    }
+                    if (closest != null && minDistance < 0.005) {
+                      setState(() {
+                        _selectedProviderId = closest!.id;
+                      });
+                    } else {
+                      setState(() {
+                        _selectedProviderId = null;
+                      });
+                    }
+                  },
+                  mapHeight: double.infinity,
+                ),
+              ],
             ),
           ),
-      ],
-    );
-  }
-
-  Widget _buildCategoryChip(String key, String label) {
-    final selected = _selectedCategoryFilter == key;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: FilterChip(
-        label: Text(label, style: const TextStyle(fontSize: 11)),
-        selected: selected,
-        selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-        checkmarkColor: AppTheme.primaryColor,
-        labelStyle: TextStyle(
-          color: selected ? AppTheme.primaryColor : (isDark ? Colors.white70 : Colors.black87),
-          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
         ),
-        onSelected: (val) {
-          setState(() {
-            _selectedCategoryFilter = key;
-          });
-        },
-      ),
+
+        // Detail / Nearby List Panel
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  activeFigmaProvider != null
+                      ? "SELECTED PROVIDER"
+                      : "${_selectedCategoryFilter == 'all' ? 'ALL NEARBY' : figmaCategories.firstWhere((c) => c.id == _selectedCategoryFilter).label.toUpperCase() + ' PROVIDERS'} — TAP PIN TO SELECT",
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: activeFigmaProvider != null
+                      ? SingleChildScrollView(
+                          child: ProviderCardWidget(provider: activeFigmaProvider),
+                        )
+                      : visibleFigmaProviders.isEmpty
+                          ? Center(
+                              child: Text(
+                                "No providers nearby for this category",
+                                style: TextStyle(
+                                  color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: EdgeInsets.zero,
+                              itemCount: visibleFigmaProviders.length > 3 ? 3 : visibleFigmaProviders.length,
+                              itemBuilder: (context, index) {
+                                return ProviderCardWidget(provider: visibleFigmaProviders[index]);
+                              },
+                            ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

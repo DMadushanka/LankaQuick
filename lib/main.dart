@@ -7,10 +7,10 @@ import 'package:local_link/core/theme/app_theme.dart';
 import 'package:local_link/features/auth/presentation/providers/auth_provider.dart';
 import 'package:local_link/features/auth/presentation/screens/auth_demo_screen.dart';
 import 'package:local_link/features/auth/presentation/screens/pin_screen.dart';
-import 'package:local_link/features/bookings/presentation/screens/bookings_demo_screen.dart';
 import 'package:local_link/features/marketplace/presentation/screens/marketplace_demo_screen.dart';
 import 'package:local_link/features/marketplace/presentation/screens/nearby_map_screen.dart';
 import 'package:local_link/features/auth/presentation/screens/profile_screen.dart';
+import 'package:local_link/features/marketplace/presentation/screens/farmer_hub_screen.dart';
 import 'package:local_link/features/auth/presentation/screens/splash_screen.dart';
 
 void main() async {
@@ -57,11 +57,13 @@ class LankaQuickApp extends ConsumerWidget {
     final splashCompleted = ref.watch(splashCompletedProvider);
     final lockStateAsync = ref.watch(appLockControllerProvider);
 
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       title: 'LankaQuick',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark, // Default to dark mode for a premium aesthetic
+      themeMode: themeMode,
       debugShowCheckedModeBanner: false,
       home: !splashCompleted
           ? const SplashScreen()
@@ -137,32 +139,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     final List<Widget> screens = [
       MarketplaceDemoScreen(isSupabaseConfigured: widget.isSupabaseConfigured),
       NearbyMapScreen(isSupabaseConfigured: widget.isSupabaseConfigured),
-      BookingsDemoScreen(isSupabaseConfigured: widget.isSupabaseConfigured),
+      const FarmerMarketplaceContent(),
+      const FarmerHubScreen(),
       const ProfileScreen(),
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(
-              Icons.offline_bolt_rounded,
-              color: theme.colorScheme.primary,
-              size: 28,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'LankaQuick',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 22,
-                color: isDark ? Colors.white : Colors.black87,
-                fontFamily: 'Outfit',
-              ),
-            ),
-          ],
-        ),
-      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -195,7 +177,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-              color: theme.dividerColor.withOpacity(0.05),
+              color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.07),
               width: 1,
             ),
           ),
@@ -203,26 +185,33 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
-          backgroundColor: theme.scaffoldBackgroundColor,
-          selectedItemColor: theme.colorScheme.primary,
-          unselectedItemColor: Colors.grey.shade500,
+          backgroundColor: isDark ? AppTheme.darkNavBg : AppTheme.lightNavBg,
+          selectedItemColor: AppTheme.primaryColor,
+          unselectedItemColor: isDark ? Colors.white.withOpacity(0.35) : Colors.black.withOpacity(0.3),
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'Outfit'),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11, fontFamily: 'Outfit'),
           showUnselectedLabels: true,
           type: BottomNavigationBarType.fixed,
           items: [
             const BottomNavigationBarItem(
-              icon: Icon(Icons.storefront_outlined),
-              activeIcon: Icon(Icons.storefront),
-              label: 'Marketplace',
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Home',
             ),
             BottomNavigationBarItem(
-              icon: const Icon(Icons.map_outlined),
-              activeIcon: const Icon(Icons.map),
+              icon: const Icon(Icons.near_me_outlined),
+              activeIcon: const Icon(Icons.near_me),
               label: tr(ref, 'nav_nearby'),
             ),
             const BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long_outlined),
-              activeIcon: Icon(Icons.receipt_long),
-              label: 'Bookings',
+              icon: Icon(Icons.storefront_outlined),
+              activeIcon: Icon(Icons.storefront),
+              label: 'Market',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.show_chart_rounded),
+              activeIcon: Icon(Icons.show_chart_rounded),
+              label: 'ගම්මිරිස්',
             ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),

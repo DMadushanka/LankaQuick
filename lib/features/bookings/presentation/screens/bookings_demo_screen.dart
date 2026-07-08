@@ -1,39 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
-import 'package:local_link/core/localization/app_localizations.dart';
 import 'package:local_link/core/theme/app_theme.dart';
-import 'package:local_link/features/auth/presentation/providers/auth_provider.dart';
-import 'package:local_link/features/bookings/domain/entities/booking_entity.dart';
-import 'package:local_link/features/bookings/presentation/providers/bookings_provider.dart';
-import 'package:local_link/features/bookings/presentation/screens/live_tracking_screen.dart';
 
-// Mock bookings list for offline testing
-final mockBookingsProvider = StateProvider<List<BookingEntity>>((ref) => [
-      BookingEntity(
-        id: 'booking_1',
-        seekerId: 'mock_seeker_123',
-        providerId: 'mock_provider_1',
-        status: 'pending',
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      ),
-      BookingEntity(
-        id: 'booking_2',
-        seekerId: 'mock_seeker_123',
-        providerId: 'mock_provider_2',
-        status: 'accepted',
-        timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      BookingEntity(
-        id: 'booking_3',
-        seekerId: 'mock_seeker_123',
-        providerId: 'mock_provider_3',
-        status: 'completed',
-        timestamp: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-    ]);
+class FigmaBooking {
+  final String id;
+  final String provider;
+  final String service;
+  final String emoji;
+  final String date;
+  final String status; // 'upcoming' or 'completed'
+  final String price;
+  final Color color;
 
-class BookingsDemoScreen extends ConsumerWidget {
+  const FigmaBooking({
+    required this.id,
+    required this.provider,
+    required this.service,
+    required this.emoji,
+    required this.date,
+    required this.status,
+    required this.price,
+    required this.color,
+  });
+}
+
+class BookingsDemoScreen extends ConsumerStatefulWidget {
   final bool isSupabaseConfigured;
 
   const BookingsDemoScreen({
@@ -41,269 +32,368 @@ class BookingsDemoScreen extends ConsumerWidget {
     required this.isSupabaseConfigured,
   });
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return AppTheme.accentColor;
-      case 'accepted':
-        return AppTheme.primaryColor;
-      case 'completed':
-        return AppTheme.secondaryColor;
-      case 'cancelled':
-      default:
-        return Colors.redAccent;
-    }
-  }
+  @override
+  ConsumerState<BookingsDemoScreen> createState() => _BookingsDemoScreenState();
+}
 
-  void _updateMockStatus(WidgetRef ref, String bookingId, String newStatus) {
-    ref.read(mockBookingsProvider.notifier).update((state) {
-      return state.map((b) {
-        if (b.id == bookingId) {
-          return BookingEntity(
-            id: b.id,
-            seekerId: b.seekerId,
-            providerId: b.providerId,
-            status: newStatus,
-            timestamp: b.timestamp,
-          );
-        }
-        return b;
-      }).toList();
-    });
-  }
+class _BookingsDemoScreenState extends ConsumerState<BookingsDemoScreen> {
+  String _activeTab = 'upcoming';
 
-  void _updateRealStatus(WidgetRef ref, String bookingId, String newStatus) {
-    ref.read(bookingsControllerProvider.notifier).updateStatus(
-          bookingId: bookingId,
-          status: newStatus,
-        );
-  }
+  final List<FigmaBooking> figmaBookings = [
+    const FigmaBooking(
+      id: "b1",
+      provider: "Kamal Perera",
+      service: "Plumbing",
+      emoji: "🔧",
+      date: "Today, 2:30 PM",
+      status: "upcoming",
+      price: "Rs. 1,500",
+      color: Color(0xFF3B82F6),
+    ),
+    const FigmaBooking(
+      id: "b2",
+      provider: "Chamari Silva",
+      service: "House Cleaning",
+      emoji: "🧹",
+      date: "Yesterday, 10:00 AM",
+      status: "completed",
+      price: "Rs. 2,400",
+      color: Color(0xFF34D399),
+    ),
+    const FigmaBooking(
+      id: "b3",
+      provider: "Nuwan Jayasinghe",
+      service: "Electrical",
+      emoji: "⚡",
+      date: "Jul 3, 9:00 AM",
+      status: "completed",
+      price: "Rs. 3,000",
+      color: Color(0xFFF59E0B),
+    ),
+    const FigmaBooking(
+      id: "b4",
+      provider: "Dilini Fernando",
+      service: "Salon & Beauty",
+      emoji: "💇",
+      date: "Jul 10, 4:00 PM",
+      status: "upcoming",
+      price: "Rs. 800",
+      color: Color(0xFFF472B6),
+    ),
+  ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(currentUserProvider);
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final bookingsStream = currentUser != null
-        ? ref.watch(bookingsStreamProvider(userId: currentUser.uid, role: currentUser.role))
-        : null;
-
-    final mockBookings = ref.watch(mockBookingsProvider);
-
-    final List<BookingEntity> bookingsList = isSupabaseConfigured
-        ? (bookingsStream?.value ?? [])
-        : mockBookings;
-
-    if (currentUser == null) {
-      return Scaffold(
-        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.grey.shade50,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.lock_outline, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                Text(
-                  tr(ref, 'bookings_signin'),
-                  style: const TextStyle(color: Colors.grey, fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final filtered = figmaBookings.where((b) => b.status == _activeTab).toList();
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(tr(ref, 'bookings_title')),
-      ),
-      body: bookingsList.isEmpty
-          ? Center(
-              child: Text(
-                tr(ref, 'bookings_empty'),
-                style: const TextStyle(color: Colors.grey),
+      backgroundColor: isDark ? AppTheme.darkBg : AppTheme.lightBg,
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Text(
+              "My Bookings",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                fontFamily: 'Outfit',
+                letterSpacing: -0.5,
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              itemCount: bookingsList.length,
-              itemBuilder: (context, index) {
-                final booking = bookingsList[index];
-                final statusColor = _getStatusColor(booking.status);
-                final isProvider = currentUser.role == 'provider';
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Track and manage your service requests",
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
+              ),
+            ),
+            const SizedBox(height: 20),
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '${tr(ref, 'bookings_id')}: ${booking.id.substring(0, booking.id.length > 8 ? 8 : booking.id.length)}...',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                booking.status.toUpperCase(),
-                                style: TextStyle(
-                                  color: statusColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ),
-                          ],
+            // Tab Buttons
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0x0DFFFFFF) : const Color(0x0D000000),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildTabButton("upcoming", "Upcoming", isDark),
+                  ),
+                  Expanded(
+                    child: _buildTabButton("completed", "Completed", isDark),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Bookings List
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(
+                      child: Text(
+                        "No $_activeTab bookings",
+                        style: TextStyle(
+                          color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
+                          fontSize: 14,
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Text(
-                              booking.timestamp.toLocal().toString().substring(0, 16),
-                              style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontSize: 13),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final b = filtered[index];
+                        final Color statusColor = b.color;
+                        final isUpcoming = b.status == 'upcoming';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppTheme.darkCard : Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.person_pin_outlined, size: 14, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Text(
-                              isProvider ? 'Seeker ID: ${booking.seekerId}' : 'Provider ID: ${booking.providerId}',
-                              style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                        if (booking.status == 'pending' ||
-                            booking.status == 'accepted' ||
-                            booking.status == 'en_route' ||
-                            booking.status == 'arrived') ...[
-                          const SizedBox(height: 16),
-                          const Divider(),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                            boxShadow: !isDark
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : [],
+                          ),
+                          child: Stack(
                             children: [
-                              if (booking.status == 'pending') ...[
-                                if (isProvider) ...[
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      if (isSupabaseConfigured) {
-                                        _updateRealStatus(ref, booking.id, 'accepted');
-                                      } else {
-                                        _updateMockStatus(ref, booking.id, 'accepted');
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.secondaryColor,
-                                      minimumSize: const Size(100, 36),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    ),
-                                    child: Text(tr(ref, 'btn_accept'), style: const TextStyle(fontSize: 12, color: Colors.white)),
+                              // Left Color Ribbon Bar Accent
+                              Positioned(
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: 3,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: statusColor,
+                                    borderRadius: BorderRadius.circular(2),
                                   ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      if (isSupabaseConfigured) {
-                                        _updateRealStatus(ref, booking.id, 'cancelled');
-                                      } else {
-                                        _updateMockStatus(ref, booking.id, 'cancelled');
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.redAccent.withOpacity(0.1),
-                                      foregroundColor: Colors.redAccent,
-                                      minimumSize: const Size(100, 36),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    ),
-                                    child: Text(tr(ref, 'btn_decline'), style: const TextStyle(fontSize: 12)),
-                                  ),
-                                ] else ...[
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      if (isSupabaseConfigured) {
-                                        _updateRealStatus(ref, booking.id, 'cancelled');
-                                      } else {
-                                        _updateMockStatus(ref, booking.id, 'cancelled');
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.redAccent.withOpacity(0.1),
-                                      foregroundColor: Colors.redAccent,
-                                      minimumSize: const Size(100, 36),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    ),
-                                    child: Text(tr(ref, 'btn_cancel_request'), style: const TextStyle(fontSize: 12)),
-                                  ),
-                                ],
-                              ],
-                              if (booking.status == 'accepted' ||
-                                  booking.status == 'en_route' ||
-                                  booking.status == 'arrived') ...[
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => LiveTrackingScreen(
-                                          booking: booking,
-                                          isSupabaseConfigured: isSupabaseConfigured,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.secondaryColor,
-                                    minimumSize: const Size(120, 36),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  icon: const Icon(Icons.map_outlined, size: 14, color: Colors.white),
-                                  label: Text(tr(ref, 'btn_track'), style: const TextStyle(fontSize: 12, color: Colors.white)),
                                 ),
-                                if (isProvider) ...[
-                                  const SizedBox(width: 8),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      if (isSupabaseConfigured) {
-                                        _updateRealStatus(ref, booking.id, 'completed');
-                                      } else {
-                                        _updateMockStatus(ref, booking.id, 'completed');
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.primaryColor,
-                                      minimumSize: const Size(120, 36),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 10),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Emoji Avatar
+                                        Container(
+                                          width: 44,
+                                          height: 44,
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withOpacity(0.09),
+                                            borderRadius: BorderRadius.circular(13),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            b.emoji,
+                                            style: const TextStyle(fontSize: 20),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        // Booking Metadata
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                b.provider,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                                                  fontFamily: 'Outfit',
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                b.service,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.access_time,
+                                                    size: 12,
+                                                    color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    b.date,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        // Pricing & Badge
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              b.price,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: isUpcoming
+                                                    ? AppTheme.primaryColor.withOpacity(0.12)
+                                                    : const Color(0xFF22C55E).withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: Text(
+                                                b.status.toUpperCase(),
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isUpcoming
+                                                      ? AppTheme.primaryColor
+                                                      : const Color(0xFF22C55E),
+                                                  letterSpacing: 0.4,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                    child: Text(tr(ref, 'btn_complete_work'), style: const TextStyle(fontSize: 12, color: Colors.white)),
-                                  ),
-                                ],
-                              ],
+                                    if (isUpcoming) ...[
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton(
+                                              onPressed: () {},
+                                              style: OutlinedButton.styleFrom(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                side: BorderSide(
+                                                  color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+                                                ),
+                                                foregroundColor: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                              ),
+                                              child: const Text(
+                                                "Reschedule",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                gradient: AppTheme.primaryGradient,
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: ElevatedButton(
+                                                onPressed: () {},
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.transparent,
+                                                  shadowColor: Colors.transparent,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                                ),
+                                                child: const Text(
+                                                  "Message",
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
-                        ],
-                      ],
+                        );
+                      },
                     ),
-                  ),
-                );
-              },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabButton(String key, String label, bool isDark) {
+    final bool isActive = _activeTab == key;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _activeTab = key;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive 
+                ? Colors.white 
+                : (isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted),
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -9,7 +9,6 @@ import 'package:local_link/features/auth/data/models/user_model.dart';
 import 'package:local_link/features/auth/presentation/providers/auth_provider.dart';
 import 'package:local_link/features/bookings/domain/entities/booking_entity.dart';
 import 'package:local_link/features/bookings/presentation/providers/bookings_provider.dart';
-import 'package:local_link/features/bookings/presentation/screens/bookings_demo_screen.dart';
 import 'package:local_link/features/marketplace/presentation/providers/location_simulation_provider.dart';
 import 'package:local_link/features/marketplace/presentation/widgets/virtual_grid_map.dart';
 
@@ -422,20 +421,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                     return p;
                   }).toList();
                 });
-                ref.read(mockBookingsProvider.notifier).update((stateList) {
-                  return stateList.map((b) {
-                    if (b.id == widget.booking.id) {
-                      return BookingEntity(
-                        id: b.id,
-                        seekerId: b.seekerId,
-                        providerId: b.providerId,
-                        status: 'arrived',
-                        timestamp: b.timestamp,
-                      );
-                    }
-                    return b;
-                  }).toList();
-                });
+                ref.read(mockBookingsProvider.notifier).updateStatus(widget.booking.id, 'arrived');
               }
             },
             style: ElevatedButton.styleFrom(

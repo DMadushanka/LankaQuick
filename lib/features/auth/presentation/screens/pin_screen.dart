@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_link/core/localization/app_localizations.dart';
+import 'package:local_link/core/theme/app_theme.dart';
+import 'package:local_link/core/theme/app_background.dart';
 import 'package:local_link/features/auth/presentation/providers/auth_provider.dart';
 import 'package:local_link/features/auth/presentation/widgets/pin_keypad_widget.dart';
 
@@ -162,151 +164,142 @@ class _PinScreenState extends ConsumerState<PinScreen>
       }
     }
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.grey.shade50,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 24),
-                  // App Identity Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.offline_bolt_rounded,
-                        size: 38,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'LankaQuick',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                          color: isDark ? Colors.white : Colors.black87,
-                          fontFamily: 'Outfit',
-                        ),
-                      ),
-                    ],
+    Color getMessageColor() {
+      switch (_messageType) {
+        case PinScreenMessage.mismatch:
+        case PinScreenMessage.incorrect:
+          return Colors.redAccent.shade200;
+        default:
+          return isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+      }
+    }
+
+    return AppBackground(
+      child: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 12),
+                
+                // App Logo Icon with subtle glow
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.12),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
+                  child: Icon(
+                    Icons.lock_rounded,
+                    size: 44,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Title
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.offline_bolt_rounded,
+                      size: 32,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'LankaQuick',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontFamily: 'Outfit',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Prompt message
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                  child: Text(
                     getDisplayMessage(),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      fontWeight: FontWeight.w600,
+                      color: getMessageColor(),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                ),
+                const SizedBox(height: 48),
 
-                  // Animated PIN indicator dots
-                  AnimatedBuilder(
-                    animation: _shakeAnimation,
-                    builder: (context, child) {
-                      final offsetVal =
-                          sin(_shakeAnimation.value * pi * 2) * _shakeAnimation.value;
-                      return Transform.translate(
-                        offset: Offset(offsetVal, 0),
-                        child: child,
-                      );
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(4, (index) {
-                        final filled = index < _enteredPin.length;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          margin: const EdgeInsets.symmetric(horizontal: 14),
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
+                // Animated PIN indicator dots
+                AnimatedBuilder(
+                  animation: _shakeAnimation,
+                  builder: (context, child) {
+                    final offsetVal =
+                        sin(_shakeAnimation.value * pi * 2) * _shakeAnimation.value;
+                    return Transform.translate(
+                      offset: Offset(offsetVal, 0),
+                      child: child,
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(4, (index) {
+                      final filled = index < _enteredPin.length;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        margin: const EdgeInsets.symmetric(horizontal: 14),
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: filled
+                              ? theme.colorScheme.primary
+                              : Colors.transparent,
+                          border: Border.all(
                             color: filled
                                 ? theme.colorScheme.primary
-                                : Colors.transparent,
-                            border: Border.all(
-                              color: filled
-                                  ? theme.colorScheme.primary
-                                  : (isDark
-                                      ? Colors.white.withOpacity(0.24)
-                                      : Colors.black.withOpacity(0.2)),
-                              width: 2.5,
-                            ),
+                                : (isDark
+                                    ? Colors.white.withOpacity(0.24)
+                                    : Colors.black.withOpacity(0.2)),
+                            width: 2.5,
                           ),
-                        );
-                      }),
-                    ),
+                          boxShadow: filled && isDark ? [
+                            BoxShadow(
+                              color: theme.colorScheme.primary.withOpacity(0.4),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            )
+                          ] : null,
+                        ),
+                      );
+                    }),
                   ),
+                ),
 
-                  const SizedBox(height: 40),
+                const SizedBox(height: 52),
 
-                  // Keypad Grid
-                  PinKeypadWidget(
+                // Premium keypad panel
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  decoration: AppTheme.glassDecoration(
+                    isDark: isDark,
+                    opacity: 0.4,
+                    borderRadius: 28,
+                  ),
+                  child: PinKeypadWidget(
                     onKeyPress: _handleKeyPress,
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // Help actions / Sign out option
-                  if (!widget.isSetup)
-                    TextButton.icon(
-                      onPressed: () async {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: Text(tr(ref, 'dialog_signout_title')),
-                            content: Text(tr(ref, 'dialog_signout_body')),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                child: Text(tr(ref, 'btn_cancel')),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(ctx);
-                                  ref
-                                      .read(appLockControllerProvider.notifier)
-                                      .resetAndLogout();
-                                },
-                                child: Text(
-                                  tr(ref, 'auth_login'),
-                                  style: const TextStyle(color: Colors.red),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.logout_outlined, size: 18),
-                      label: Text(
-                        tr(ref, 'btn_sign_out'),
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ),
-
-                  if (widget.isSetup && _isConfirming)
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _isConfirming = false;
-                          _firstEnteredPin = '';
-                          _enteredPin = '';
-                          _messageType = PinScreenMessage.create;
-                        });
-                      },
-                      child: Text(tr(ref, 'btn_back_to_create')),
-                    ),
-                  const SizedBox(height: 12),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
